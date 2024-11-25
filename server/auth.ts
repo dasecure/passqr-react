@@ -8,6 +8,9 @@ import { promisify } from "util";
 import { users, insertUserSchema, type User as SelectUser } from "@db/schema";
 import { db } from "../db";
 import { eq } from "drizzle-orm";
+import { rateLimit } from "express-rate-limit";
+import { addHours, isAfter } from "date-fns";
+import { passwordResetTokens } from "@db/schema";
 
 const scryptAsync = promisify(scrypt);
 export const crypto = {
@@ -33,6 +36,24 @@ declare global {
     interface User extends SelectUser { }
   }
 }
+  // Rate limiter for password reset attempts
+  const passwordResetLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 3, // Limit each IP to 3 requests per hour
+    message: "Too many password reset attempts. Please try again in an hour.",
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  // Rate limiter for failed login attempts
+  const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5, // Limit each IP to 5 requests per 15 minutes
+    message: "Too many login attempts. Please try again later.",
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
 
 export function setupAuth(app: Express) {
   const MemoryStore = createMemoryStore(session);
