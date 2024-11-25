@@ -2,6 +2,7 @@ import { type Express } from "express";
 import { setupAuth } from "./auth";
 
 import { randomBytes } from "crypto";
+import { crypto } from "./auth";
 import { db } from "../db";
 import { users, passwordResetTokens } from "@db/schema";
 import { eq } from "drizzle-orm";
