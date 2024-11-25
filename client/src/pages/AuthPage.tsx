@@ -2,6 +2,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import LoginForm from "../components/auth/LoginForm";
 import QRCodeLogin from "../components/auth/QRCodeLogin";
+import PasswordResetForm from "../components/auth/PasswordResetForm";
 import { motion } from "framer-motion";
 
 export default function AuthPage() {
@@ -22,12 +23,16 @@ export default function AuthPage() {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="password" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="password">Password</TabsTrigger>
+                <TabsTrigger value="reset">Reset</TabsTrigger>
                 <TabsTrigger value="qr">QR Code</TabsTrigger>
               </TabsList>
               <TabsContent value="password">
                 <LoginForm />
+              </TabsContent>
+              <TabsContent value="reset">
+                <PasswordResetForm />
               </TabsContent>
               <TabsContent value="qr">
                 <QRCodeLogin />
