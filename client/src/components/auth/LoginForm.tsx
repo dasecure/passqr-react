@@ -15,11 +15,11 @@ export default function LoginForm() {
   const { toast } = useToast();
 
   const form = useForm<InsertUser>({
-    resolver: zodResolver(insertUserSchema),
+    resolver: zodResolver(isRegistering ? insertUserSchema : insertUserSchema.omit({ email: true })),
     defaultValues: {
       username: "",
       password: "",
-      email: "",
+      email: isRegistering ? "" : undefined,
     },
   });
 
@@ -47,19 +47,21 @@ export default function LoginForm() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="email"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Email</FormLabel>
-              <FormControl>
-                <Input type="email" placeholder="Enter your email" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {isRegistering && (
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email</FormLabel>
+                <FormControl>
+                  <Input type="email" placeholder="Enter your email" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
         <FormField
           control={form.control}
           name="username"
