@@ -65,9 +65,8 @@ export function registerRoutes(app: Express) {
         used: 0,
       });
 
-      // In a real application, you would send an email here with a link like:
-      // ${process.env.APP_URL}/reset-password?token=${token}
-      console.log(`Password reset token for ${email}: ${token}`);
+      // Send password reset email
+      await sendPasswordResetEmail(email, token);
 
       res.json({ message: "If an account exists with that email, you will receive a password reset link." });
     } catch (error) {
