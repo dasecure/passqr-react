@@ -15,11 +15,11 @@ export default function LoginForm() {
   const { toast } = useToast();
 
   const form = useForm<InsertUser>({
-    resolver: zodResolver(isRegistering ? insertUserSchema : insertUserSchema.omit({ email: true })),
+    resolver: zodResolver(isRegistering ? insertUserSchema : loginUserSchema),
     defaultValues: {
       username: "",
       password: "",
-      email: isRegistering ? "" : undefined,
+      ...(isRegistering ? { email: "" } : {}),
     },
   });
 

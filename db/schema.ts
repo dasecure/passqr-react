@@ -20,6 +20,10 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
 export const insertUserSchema = createInsertSchema(users, {
   email: z.string().email(),
 });
+export const loginUserSchema = createInsertSchema(users, {
+  username: z.string(),
+  password: z.string(),
+}).omit({ email: true });
 export const selectUserSchema = createSelectSchema(users);
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = z.infer<typeof selectUserSchema>;

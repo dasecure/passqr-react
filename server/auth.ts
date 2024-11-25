@@ -177,7 +177,7 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
-    const result = insertUserSchema.safeParse(req.body);
+    const result = loginUserSchema.safeParse(req.body);
     if (!result.success) {
       return res
         .status(400)
