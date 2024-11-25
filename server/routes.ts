@@ -46,8 +46,12 @@ export function registerRoutes(app: Express) {
       await db
         .update(passwordResetTokens)
         .set({ used: 1 })
-        .where(eq(passwordResetTokens.userId, user.id))
-        .where(eq(passwordResetTokens.used, 0));
+        .where(
+          and(
+            eq(passwordResetTokens.userId, user.id),
+            eq(passwordResetTokens.used, 0)
+          )
+        );
 
       // Generate reset token
       const token = randomBytes(32).toString("hex");
@@ -89,8 +93,12 @@ export function registerRoutes(app: Express) {
       const [resetToken] = await db
         .select()
         .from(passwordResetTokens)
-        .where(eq(passwordResetTokens.token, token))
-        .where(eq(passwordResetTokens.used, 0))
+        .where(
+          and(
+            eq(passwordResetTokens.token, token),
+            eq(passwordResetTokens.used, 0)
+          )
+        )
         .limit(1);
 
       if (!resetToken) {
@@ -126,8 +134,12 @@ export function registerRoutes(app: Express) {
         await tx
           .update(passwordResetTokens)
           .set({ used: 1 })
-          .where(eq(passwordResetTokens.userId, resetToken.userId))
-          .where(eq(passwordResetTokens.used, 0));
+          .where(
+            and(
+              eq(passwordResetTokens.userId, resetToken.userId),
+              eq(passwordResetTokens.used, 0)
+            )
+          );
       });
 
       res.json({ message: "Password updated successfully" });
