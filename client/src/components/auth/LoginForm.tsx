@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useUser } from "../../hooks/use-user";
-import { insertUserSchema, type InsertUser } from "@db/schema";
+import { insertUserSchema, loginUserSchema, type InsertUser } from "@db/schema";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 
