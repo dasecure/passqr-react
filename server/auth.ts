@@ -1,3 +1,4 @@
+import { insertUserSchema, loginUserSchema } from "@db/schema";
 import passport from "passport";
 import { IVerifyOptions, Strategy as LocalStrategy } from "passport-local";
 import { type Express } from "express";
