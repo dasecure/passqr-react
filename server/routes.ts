@@ -30,8 +30,10 @@ async function sendPasswordResetEmail(email: string, token: string) {
   console.log('Gmail user configured:', !!process.env.GMAIL_USER);
   console.log('Gmail password configured:', !!process.env.GMAIL_APP_PASSWORD);
 
-  // Create transport
-  console.log('Creating nodemailer transport');
+  // Connection debugging
+  console.log('Testing Gmail connection configuration...');
+  console.log('Using smtp.gmail.com with port 587');
+  console.log('Transport configuration test starting...');
   console.log('Email configuration:', {
     host: 'smtp.gmail.com',
     port: 587,
@@ -50,23 +52,33 @@ async function sendPasswordResetEmail(email: string, token: string) {
       user: process.env.GMAIL_USER,
       pass: process.env.GMAIL_APP_PASSWORD
     },
-    debug: true // Enable debug logs
+    debug: true,
+    logger: true // Enable built-in logger
   });
 
   // Verify transporter configuration
   try {
-    console.log('Verifying SMTP configuration...');
+    console.log('Attempting SMTP connection verification...');
     await transporter.verify();
     console.log('SMTP verification successful');
   } catch (error) {
     const emailError = error as EmailError;
-    console.error('SMTP verification failed with error:', {
+    console.error('SMTP verification failed:', {
       name: emailError.name,
       message: emailError.message,
       code: emailError.code,
-      command: emailError.command
+      command: emailError.command,
+      stack: emailError.stack
     });
-    throw new Error('Failed to verify SMTP configuration: ' + emailError.message);
+    
+    // Check for specific Gmail errors
+    if (emailError.code === 'EAUTH') {
+      console.error('Authentication failed - check Gmail credentials');
+    } else if (emailError.code === 'ESOCKET') {
+      console.error('Socket connection failed - check network/firewall');
+    }
+    
+    throw error;
   }
 
   const resetUrl = `${process.env.PUBLIC_URL || 'http://localhost:5000'}/auth?token=${token}`;
