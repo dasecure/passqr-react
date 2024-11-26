@@ -69,11 +69,13 @@ export default function QRCodeLogin() {
     onSuccess: (data) => {
       if (data.success) {
         setVerificationStatus("success");
+        queryClient.invalidateQueries({ queryKey: ['user'] });
         toast({
           title: "Success",
           description: "QR code login successful",
         });
-        setTimeout(() => setLocation("/"), 1500);
+        // Add delay to allow state update
+        setTimeout(() => setLocation("/"), 2000);
       }
     },
     onError: (error) => {

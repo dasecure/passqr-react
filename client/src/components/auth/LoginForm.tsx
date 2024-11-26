@@ -34,6 +34,9 @@ export default function LoginForm() {
           title: "Error",
           description: result.message,
         });
+      } else {
+        // Add delay to allow state update
+        setTimeout(() => setLocation("/"), 2000);
       }
     } catch (error) {
       toast({
