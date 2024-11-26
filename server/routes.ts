@@ -25,13 +25,15 @@ const passwordResetLimiter = rateLimit({
 });
 
 async function sendPasswordResetEmail(email: string, token: string) {
+  console.log('=== Password Reset Email Process Starting ===');
+  console.log('Environment Check:');
+  console.log('- NODE_ENV:', process.env.NODE_ENV);
+  console.log('- Gmail User Status:', process.env.GMAIL_USER ? 'Configured' : 'Missing');
+  console.log('- Gmail Password Status:', process.env.GMAIL_APP_PASSWORD ? 'Configured' : 'Missing');
+  console.log('- Public URL:', process.env.PUBLIC_URL || 'http://localhost:5000');
+
   const timestamp = new Date().toISOString();
   console.log(`[${timestamp}] Starting email process...`);
-  
-  // Log environment configuration
-  console.log(`[${timestamp}] Checking email configuration...`);
-  console.log(`[${timestamp}] Gmail user configured:`, !!process.env.GMAIL_USER);
-  console.log(`[${timestamp}] Gmail password configured:`, !!process.env.GMAIL_APP_PASSWORD);
 
   // Connection debugging with detailed SMTP configuration
   console.log(`[${timestamp}] SMTP Configuration:`, {
