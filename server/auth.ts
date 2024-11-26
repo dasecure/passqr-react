@@ -1,9 +1,13 @@
 import passport from "passport";
 import { IVerifyOptions, Strategy as LocalStrategy } from "passport-local";
-import { type Express } from "express";
+import { type Express, Request } from "express";
 import session from "express-session";
 import cookieParser from "cookie-parser";
 import csrf from "csurf";
+
+interface CustomRequest extends Request {
+  csrfToken(): string;
+}
 import createMemoryStore from "memorystore";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
@@ -81,7 +85,7 @@ export function setupAuth(app: Express) {
   app.use(passport.session());
   
   // CSRF token middleware
-  app.use((req, res, next) => {
+  app.use((req: CustomRequest, res, next) => {
     res.cookie("XSRF-TOKEN", req.csrfToken());
     next();
   });

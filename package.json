@@ -43,6 +43,8 @@
     "@replit/vite-plugin-shadcn-theme-json": "^0.0.3",
     "@sendgrid/mail": "^8.1.4",
     "@tanstack/react-query": "^5.61.3",
+    "@types/cookie-parser": "^1.4.8",
+    "@types/csurf": "^1.11.5",
     "@types/nodemailer": "^6.4.17",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
