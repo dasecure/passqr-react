@@ -81,6 +81,15 @@ export function setupAuth(app: Express) {
   }
 
   app.use(cookieParser());
+  // Add CORS headers for OAuth
+  app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Origin', process.env.PUBLIC_URL || 'http://localhost:5000');
+    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
+    res.header('Access-Control-Allow-Headers', 'X-Requested-With, X-HTTP-Method-Override, Content-Type, Accept');
+    next();
+  });
+
   app.use(session(sessionSettings));
   app.use(csrf({ 
     cookie: true,
@@ -131,8 +140,9 @@ export function setupAuth(app: Express) {
   passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID!,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    callbackURL: `${process.env.PUBLIC_URL || 'http://localhost:5000'}/api/auth/google/callback`,
-    scope: ["email", "profile"]
+    callbackURL: "/api/auth/google/callback",  // Use relative URL
+    scope: ["email", "profile"],
+    proxy: true  // Enable proxy support
   }, async (accessToken: string, refreshToken: string, profile: any, done: (error: any, user?: any) => void) => {
     try {
       // Check if user exists
@@ -272,9 +282,11 @@ export function setupAuth(app: Express) {
 
   // Google OAuth routes
   app.get("/api/auth/google", (req, res, next) => {
+    req.session.authState = Math.random().toString(36).substring(7);
     passport.authenticate("google", {
       scope: ["email", "profile"],
-      prompt: "select_account"
+      prompt: "select_account",
+      state: req.session.authState
     })(req, res, next);
   });
 
