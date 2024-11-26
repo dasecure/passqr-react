@@ -3,7 +3,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useUser } from "@/hooks/use-user";
 import { useLocation } from "wouter";
 
@@ -25,8 +25,7 @@ async function generateQRCode() {
     throw new Error(await response.text());
   }
 
-  const data = await response.json();
-  return data.token;
+  return (await response.json()).token;
 }
 
 async function verifyQRCode(token: string) {
@@ -56,6 +55,7 @@ export default function QRCodeLogin() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { user } = useUser();
+  const queryClient = useQueryClient();
   const [verificationStatus, setVerificationStatus] = useState<"pending" | "success" | "error" | "linking">("pending");
 
   const { data: token, isLoading: isGenerating, error: generateError } = useQuery({
@@ -69,6 +69,7 @@ export default function QRCodeLogin() {
     onSuccess: (data) => {
       if (data.success) {
         setVerificationStatus("success");
+        // Force refresh user data
         queryClient.invalidateQueries({ queryKey: ['user'] });
         toast({
           title: "Success",
@@ -98,7 +99,7 @@ export default function QRCodeLogin() {
     if (token && !user) {
       intervalId = setInterval(() => {
         verifyMutation.mutate(token);
-      }, 3000); // Increase interval to 3 seconds
+      }, 3000);
     }
 
     return () => {

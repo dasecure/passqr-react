@@ -3,6 +3,7 @@ import { useParams, useLocation } from "wouter";
 import { useUser } from "@/hooks/use-user";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 async function linkQRCode(token: string) {
   const csrfToken = document.cookie
@@ -32,6 +33,7 @@ export default function QRLinkHandler() {
   const [, setLocation] = useLocation();
   const { user } = useUser();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!user) {
@@ -51,6 +53,8 @@ export default function QRLinkHandler() {
           title: "Success",
           description: "QR code linked successfully. You can now close this page.",
         });
+        // Force refresh user data on mobile device
+        queryClient.invalidateQueries({ queryKey: ['user'] });
       } catch (error) {
         toast({
           variant: "destructive",
@@ -62,7 +66,7 @@ export default function QRLinkHandler() {
     };
 
     handleLink();
-  }, [token, user, setLocation, toast]);
+  }, [token, user, setLocation, toast, queryClient]);
 
   return (
     <div className="flex items-center justify-center min-h-screen">
