@@ -319,8 +319,12 @@ export function setupAuth(app: Express) {
   );
 
   app.post("/api/logout", (req, res) => {
-    // Get user ID before logout
+    if (!req.isAuthenticated()) {
+      return res.json({ message: "Already logged out" });
+    }
+
     const userId = req.user?.id;
+    const sessionId = req.sessionID;
     
     req.logout((err) => {
       if (err) {
@@ -328,20 +332,26 @@ export function setupAuth(app: Express) {
       }
       
       if (userId) {
-        // Destroy all sessions for this user
         const store = req.sessionStore as MemoryStore;
         store.all((error: any, sessions: any) => {
           if (error) return;
           
-          Object.entries(sessions).forEach(([, session]: [string, any]) => {
-            if (session?.passport?.user === userId) {
-              store.destroy(session.id);
+          Object.entries(sessions).forEach(([sid, session]: [string, any]) => {
+            if (session?.passport?.user === userId && sid !== sessionId) {
+              store.destroy(sid);
             }
           });
         });
       }
-      
-      res.json({ message: "Logout successful" });
+
+      // Destroy current session last
+      req.session.destroy((err) => {
+        if (err) {
+          console.error('Session destruction failed:', err);
+        }
+        res.clearCookie('sessionId');
+        res.json({ message: "Logout successful" });
+      });
     });
   });
 

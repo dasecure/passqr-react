@@ -7,7 +7,11 @@ export default function HomePage() {
   const { user, logout, isLoading } = useUser();
 
   const handleLogout = async () => {
-    await logout();
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   };
 
   if (isLoading) {
