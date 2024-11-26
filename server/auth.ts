@@ -119,7 +119,7 @@ export function setupAuth(app: Express) {
     clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     callbackURL: "/api/auth/google/callback",
     scope: ["email", "profile"]
-  }, async (accessToken, refreshToken, profile, done) => {
+  }, async (accessToken: string, refreshToken: string, profile: any, done: (error: any, user?: any) => void) => {
     try {
       // Check if user exists
       const [existingUser] = await db
