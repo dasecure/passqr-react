@@ -96,10 +96,24 @@ export function setupAuth(app: Express) {
 
   // Add CORS headers before all other middleware
   app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', process.env.PUBLIC_URL || 'http://localhost:5000');
+    // Allow Google domains for OAuth
+    const allowedOrigins = [
+      process.env.PUBLIC_URL || 'http://localhost:5000',
+      'https://accounts.google.com'
+    ];
+    const origin = req.headers.origin;
+    
+    if (origin && allowedOrigins.includes(origin)) {
+      res.header('Access-Control-Allow-Origin', origin);
+    }
+    
     res.header('Access-Control-Allow-Credentials', 'true');
     res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
     res.header('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+    
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(200);
+    }
     next();
   });
 
@@ -155,7 +169,7 @@ export function setupAuth(app: Express) {
   passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID!,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    callbackURL: process.env.PUBLIC_URL ? `${process.env.PUBLIC_URL}/api/auth/google/callback` : "https://passqr.vincent8.repl.co/api/auth/google/callback",
+    callbackURL: "/api/auth/google/callback",
     proxy: true
   }, async (accessToken: string, refreshToken: string, profile: any, done: (error: any, user?: any) => void) => {
     try {
@@ -296,13 +310,11 @@ export function setupAuth(app: Express) {
 
   // Google OAuth routes
   app.get("/api/auth/google", (req, res, next) => {
-    const authURL = process.env.PUBLIC_URL || "https://passqr.vincent8.repl.co";
     req.session.authState = Math.random().toString(36).substring(7);
     passport.authenticate("google", {
       scope: ["email", "profile"],
       state: req.session.authState,
-      prompt: "select_account",
-      callbackURL: `${authURL}/api/auth/google/callback`
+      prompt: "select_account"
     })(req, res, next);
   });
 
@@ -311,11 +323,9 @@ export function setupAuth(app: Express) {
       if (req.query.state !== req.session.authState) {
         return res.redirect('/auth?error=invalid_state');
       }
-      const authURL = process.env.PUBLIC_URL || "https://passqr.vincent8.repl.co";
       passport.authenticate("google", {
         failureRedirect: "/auth?error=oauth_failed",
-        successRedirect: "/",
-        callbackURL: `${authURL}/api/auth/google/callback`
+        successRedirect: "/"
       })(req, res, next);
     }
   );
