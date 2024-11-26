@@ -28,10 +28,19 @@ async function sendPasswordResetEmail(email: string, token: string) {
     }
   });
 
+  // Verify transporter configuration
+  try {
+    await transporter.verify();
+    console.log('SMTP connection verified successfully');
+  } catch (error) {
+    console.error('SMTP verification failed:', error);
+    throw new Error('Failed to connect to email server');
+  }
+
   const resetUrl = `${process.env.PUBLIC_URL || 'http://localhost:5000'}/auth?token=${token}`;
 
   try {
-    await transporter.sendMail({
+    const info = await transporter.sendMail({
       from: process.env.GMAIL_USER,
       to: email,
       subject: 'Password Reset Request',
@@ -43,7 +52,7 @@ async function sendPasswordResetEmail(email: string, token: string) {
         <p>If you didn't request this, please ignore this email.</p>
       `
     });
-    console.log('Password reset email sent successfully');
+    console.log('Password reset email sent successfully:', info.messageId);
   } catch (error) {
     console.error('Failed to send password reset email:', error);
     throw new Error('Failed to send password reset email');
@@ -74,6 +83,7 @@ export function setupRoutes(app: Express) {
   // Password reset endpoints
   app.post("/api/reset-password", passwordResetLimiter, async (req, res) => {
     const { email } = req.body;
+    console.log('Password reset requested for email:', email);
     if (!email) {
       return res.status(400).send("Email is required");
     }
