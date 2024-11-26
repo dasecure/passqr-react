@@ -319,10 +319,28 @@ export function setupAuth(app: Express) {
   );
 
   app.post("/api/logout", (req, res) => {
+    // Get user ID before logout
+    const userId = req.user?.id;
+    
     req.logout((err) => {
       if (err) {
         return res.status(500).send("Logout failed");
       }
+      
+      if (userId) {
+        // Destroy all sessions for this user
+        const store = req.sessionStore as MemoryStore;
+        store.all((error: any, sessions: any) => {
+          if (error) return;
+          
+          Object.entries(sessions).forEach(([, session]: [string, any]) => {
+            if (session?.passport?.user === userId) {
+              store.destroy(session.id);
+            }
+          });
+        });
+      }
+      
       res.json({ message: "Logout successful" });
     });
   });
