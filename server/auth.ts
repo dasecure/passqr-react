@@ -169,7 +169,7 @@ export function setupAuth(app: Express) {
   passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID!,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    callbackURL: `${process.env.PUBLIC_URL || 'https://passqr.vincent8.repl.co'}/api/auth/google/callback`,
+    callbackURL: "/api/auth/google/callback",
     proxy: true
   }, async (accessToken: string, refreshToken: string, profile: any, done: (error: any, user?: any) => void) => {
     try {
@@ -310,28 +310,23 @@ export function setupAuth(app: Express) {
 
   // Google OAuth routes
   app.get("/api/auth/google", (req, res, next) => {
-    const fullUrl = process.env.PUBLIC_URL || 'https://passqr.vincent8.repl.co';
     req.session.authState = Math.random().toString(36).substring(7);
     passport.authenticate("google", {
       scope: ["email", "profile"],
       state: req.session.authState,
-      prompt: "select_account",
-      callbackURL: `${fullUrl}/api/auth/google/callback`
+      prompt: "select_account"
     })(req, res, next);
   });
 
   app.get("/api/auth/google/callback",
     (req, res, next) => {
-      const fullUrl = process.env.PUBLIC_URL || 'https://passqr.vincent8.repl.co';
-      
       if (req.query.state !== req.session.authState) {
         return res.redirect('/auth?error=invalid_state');
       }
       
       passport.authenticate("google", {
         failureRedirect: "/auth?error=oauth_failed",
-        successRedirect: "/",
-        callbackURL: `${fullUrl}/api/auth/google/callback`
+        successRedirect: "/"
       })(req, res, next);
     }
   );

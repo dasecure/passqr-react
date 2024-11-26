@@ -120,8 +120,7 @@ export default function LoginForm() {
             variant="outline"
             className="w-full"
             onClick={() => {
-              // Show loading state in button
-              const button = document.activeElement as HTMLButtonElement;
+              const button = document.activeElement as HTMLButtonElement | null;
               if (button) {
                 button.disabled = true;
                 button.innerHTML = '<span class="loader"></span> Redirecting to Google...';

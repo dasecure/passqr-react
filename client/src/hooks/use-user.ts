@@ -73,13 +73,15 @@ async function fetchUser(): Promise<User | null> {
 export function useUser() {
   const queryClient = useQueryClient();
 
-  const { data: user, error, isLoading } = useQuery<User | null, Error>({
+  const { data: user, error, isLoading } = useQuery({
     queryKey: ['user'],
     queryFn: fetchUser,
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 1,
-    onError: () => {
-      queryClient.setQueryData(['user'], null);
+    onSettled: (data, error) => {
+      if (error) {
+        queryClient.setQueryData(['user'], null);
+      }
     }
   });
 
