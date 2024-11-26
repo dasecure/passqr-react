@@ -29,11 +29,16 @@ async function linkQRCode(token: string) {
 }
 
 export default function QRLinkHandler() {
-  const { token } = useParams();
+  const { token } = useParams<{ token: string }>();
   const [, setLocation] = useLocation();
   const { user } = useUser();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Add early return if token is undefined
+  if (!token) {
+    return null;
+  }
 
   useEffect(() => {
     if (!user) {
