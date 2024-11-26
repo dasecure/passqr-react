@@ -58,10 +58,8 @@ declare module "express-session" {
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
-  trustProxies: true,
   standardHeaders: true,
   legacyHeaders: false,
-  // Add custom key generator to avoid X-Forwarded-For issues
   keyGenerator: (request) => {
     return request.ip || request.connection.remoteAddress || '';
   },
@@ -331,7 +329,7 @@ export function setupAuth(app: Express) {
         return res.status(500).send("Logout failed");
       }
       
-      if (userId) {
+      if (userId && req.sessionStore) {
         const store = req.sessionStore;
         store.all((error: any, sessions: any) => {
           if (error) return;
