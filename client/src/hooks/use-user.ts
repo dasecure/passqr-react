@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import type { User, InsertUser } from "@db/schema";
 
 type RequestResult = {
@@ -73,20 +74,24 @@ async function fetchUser(): Promise<User | null> {
 export function useUser() {
   const queryClient = useQueryClient();
 
-  const { data: user, error, isLoading } = useQuery<User | null, Error>({
+  const { data: user, error, isLoading } = useQuery<User | null>({
     queryKey: ['user'],
     queryFn: fetchUser,
     staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: 1,
-    onSuccess: (data: User | null) => {
-      if (!data) {
-        queryClient.setQueryData(['user'], null);
-      }
-    },
-    onError: (error: Error) => {
+    retry: 1
+  });
+
+  useEffect(() => {
+    if (!user) {
       queryClient.setQueryData(['user'], null);
     }
-  });
+  }, [user, queryClient]);
+
+  useEffect(() => {
+    if (error) {
+      queryClient.setQueryData(['user'], null);
+    }
+  }, [error, queryClient]);
 
   const loginMutation = useMutation<
     RequestResult,

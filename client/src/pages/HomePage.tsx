@@ -8,6 +8,9 @@ export default function HomePage() {
   const { user, logout, isLoading } = useUser();
   const [, setLocation] = useLocation();
 
+  // Add type assertion
+  const typedUser = user as User | null;
+
   const handleLogout = async () => {
     try {
       await logout();
@@ -28,7 +31,7 @@ export default function HomePage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-md mx-auto">
-        <h1 className="text-2xl font-bold mb-4">Welcome, {user?.username}!</h1>
+        <h1 className="text-2xl font-bold mb-4">Welcome, {typedUser?.username}!</h1>
         <Button onClick={handleLogout} variant="outline" className="w-full">
           Logout
         </Button>

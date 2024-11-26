@@ -74,7 +74,7 @@ export default function LoginForm() {
             <FormItem>
               <FormLabel>Username</FormLabel>
               <FormControl>
-                <Input {...field} />
+                <Input {...field} value={field.value || ''} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -87,7 +87,7 @@ export default function LoginForm() {
             <FormItem>
               <FormLabel>Password</FormLabel>
               <FormControl>
-                <Input type="password" {...field} />
+                <Input type="password" {...field} value={field.value || ''} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -120,10 +120,10 @@ export default function LoginForm() {
             variant="outline"
             className="w-full"
             onClick={() => {
-              const button = document.activeElement as HTMLButtonElement | null;
+              const button = document.activeElement as HTMLButtonElement;
               if (button) {
                 button.disabled = true;
-                button.innerHTML = '<span class="loader"></span> Redirecting to Google...';
+                button.innerHTML = 'Redirecting to Google...';
               }
               window.location.href = "/api/auth/google";
             }}
