@@ -39,3 +39,15 @@ export const insertPasswordResetTokenSchema = createInsertSchema(passwordResetTo
 export const selectPasswordResetTokenSchema = createSelectSchema(passwordResetTokens);
 export type InsertPasswordResetToken = z.infer<typeof insertPasswordResetTokenSchema>;
 export type PasswordResetToken = z.infer<typeof selectPasswordResetTokenSchema>;
+export const qrTokens = pgTable("qr_tokens", {
+  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  token: text("token").notNull().unique(),
+  userId: integer("user_id").references(() => users.id),
+  expiresAt: timestamp("expires_at").notNull(),
+  used: integer("used").notNull().default(0),
+});
+
+export const insertQrTokenSchema = createInsertSchema(qrTokens);
+export const selectQrTokenSchema = createSelectSchema(qrTokens);
+export type InsertQrToken = z.infer<typeof insertQrTokenSchema>;
+export type QrToken = z.infer<typeof selectQrTokenSchema>;

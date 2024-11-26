@@ -3,7 +3,7 @@ import { setupAuth } from "./auth";
 import { randomBytes } from "crypto";
 import { crypto } from "./auth";
 import { db } from "../db";
-import { users, passwordResetTokens } from "@db/schema";
+import { users, passwordResetTokens, qrTokens } from "@db/schema";
 import { eq } from "drizzle-orm";
 import { isAfter, addHours } from "date-fns";
 import nodemailer from "nodemailer";
@@ -128,19 +128,119 @@ export function registerRoutes(app: Express) {
   // Set up authentication routes
   setupAuth(app);
 
-  // Add QR code-specific routes here if needed
-  app.post("/api/qr/generate", (req, res) => {
-    // In a real implementation, this would generate a unique QR code token
-    const token = Math.random().toString(36).substring(7);
-    res.json({ token });
+  // QR code login routes
+  app.post("/api/qr/generate", async (req, res) => {
+    try {
+      const token = randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // Token expires in 5 minutes
+
+      await db.insert(qrTokens).values({
+        token,
+        expiresAt,
+        used: 0
+      });
+
+      res.json({ token });
+    } catch (error) {
+      console.error('QR token generation error:', error);
+      res.status(500).send('Failed to generate QR code');
+    }
   });
 
-  app.post("/api/qr/verify", (req, res) => {
+  app.post("/api/qr/verify", async (req, res) => {
     const { token } = req.body;
     if (!token) {
       return res.status(400).send("Token is required");
     }
-    res.json({ verified: true });
+
+    try {
+      const [qrToken] = await db
+        .select()
+        .from(qrTokens)
+        .where(
+          and(
+            eq(qrTokens.token, token),
+            eq(qrTokens.used, 0)
+          )
+        )
+        .limit(1);
+
+      if (!qrToken) {
+        return res.status(400).send("Invalid or expired token");
+      }
+
+      if (isAfter(new Date(), qrToken.expiresAt)) {
+        await db
+          .update(qrTokens)
+          .set({ used: 1 })
+          .where(eq(qrTokens.id, qrToken.id));
+        return res.status(400).send("Token has expired");
+      }
+
+      // If token is valid, update it as used
+      await db
+        .update(qrTokens)
+        .set({ used: 1 })
+        .where(eq(qrTokens.id, qrToken.id));
+
+      // Create session for the user
+      if (qrToken.userId) {
+        const [user] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, qrToken.userId))
+          .limit(1);
+
+        if (user) {
+          req.login(user, (err) => {
+            if (err) {
+              return res.status(500).send("Login failed");
+            }
+            return res.json({ success: true, user: { id: user.id, username: user.username } });
+          });
+        } else {
+          res.status(400).send("User not found");
+        }
+      } else {
+        res.status(400).send("Token not associated with a user");
+      }
+    } catch (error) {
+      console.error('QR token verification error:', error);
+      res.status(500).send('Failed to verify QR code');
+    }
+  });
+
+  app.post("/api/qr/link", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    const { token } = req.body;
+    if (!token) {
+      return res.status(400).send("Token is required");
+    }
+
+    try {
+      const result = await db
+        .update(qrTokens)
+        .set({ userId: req.user.id })
+        .where(
+          and(
+            eq(qrTokens.token, token),
+            eq(qrTokens.used, 0)
+          )
+        )
+        .returning();
+
+      if (!result.length) {
+        return res.status(400).send("Invalid or expired token");
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('QR token linking error:', error);
+      res.status(500).send('Failed to link QR code');
+    }
   });
 }
 
