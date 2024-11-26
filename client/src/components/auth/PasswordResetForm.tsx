@@ -62,9 +62,19 @@ export default function PasswordResetForm() {
   async function onRequestReset(values: ResetRequestData) {
     setIsSubmitting(true);
     try {
+      // Get CSRF token from cookie
+      const csrfToken = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('XSRF-TOKEN'))
+        ?.split('=')[1];
+
       const response = await fetch("/api/reset-password", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken || ''
+        },
+        credentials: 'include',
         body: JSON.stringify(values),
       });
 
@@ -94,9 +104,19 @@ export default function PasswordResetForm() {
     
     setIsSubmitting(true);
     try {
+      // Get CSRF token from cookie
+      const csrfToken = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('XSRF-TOKEN'))
+        ?.split('=')[1];
+
       const response = await fetch(`/api/reset-password/${resetToken}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken || ''
+        },
+        credentials: 'include',
         body: JSON.stringify({ password: values.password }),
       });
 
