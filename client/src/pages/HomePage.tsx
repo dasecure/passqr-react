@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { useUser } from "../hooks/use-user";
 import { Loader2 } from "lucide-react";
+import type { User } from "@db/schema";
 
 export default function HomePage() {
   const { user, logout, isLoading } = useUser();
