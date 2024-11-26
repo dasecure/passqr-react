@@ -76,8 +76,11 @@ export function useUser() {
   const { data: user, error, isLoading } = useQuery<User | null, Error>({
     queryKey: ['user'],
     queryFn: fetchUser,
-    staleTime: Infinity,
-    retry: false
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1,
+    onError: () => {
+      queryClient.setQueryData(['user'], null);
+    }
   });
 
   const loginMutation = useMutation<

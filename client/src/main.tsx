@@ -12,6 +12,7 @@ import { useUser } from "./hooks/use-user";
 
 function Router() {
   const { user, isLoading } = useUser();
+  const [location] = useLocation();
 
   if (isLoading) {
     return (
@@ -21,13 +22,14 @@ function Router() {
     );
   }
 
-  if (!user) {
+  if (!user && location !== '/auth') {
     return <AuthPage />;
   }
 
   return (
     <Switch>
       <Route path="/" component={HomePage} />
+      <Route path="/auth" component={AuthPage} />
       <Route>404 Page Not Found</Route>
     </Switch>
   );

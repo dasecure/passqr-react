@@ -58,17 +58,18 @@ export function setupAuth(app: Express) {
   const MemoryStore = createMemoryStore(session);
   const sessionSettings: session.SessionOptions = {
     secret: process.env.REPL_ID || "porygon-supremacy",
-    resave: false,
+    resave: true,
     saveUninitialized: false,
-    name: 'sessionId', // Custom session cookie name
+    name: 'sessionId',
     cookie: {
       httpOnly: true,
-      sameSite: 'strict',
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      secure: process.env.NODE_ENV === "production",
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60 * 1000
     },
     store: new MemoryStore({
-      checkPeriod: 86400000, // Cleanup expired sessions
-    }),
+      checkPeriod: 86400000
+    })
   };
 
   if (app.get("env") === "production") {
