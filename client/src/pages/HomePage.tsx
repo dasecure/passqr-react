@@ -2,9 +2,11 @@ import { Button } from "@/components/ui/button";
 import { useUser } from "../hooks/use-user";
 import { Loader2 } from "lucide-react";
 import type { User } from "@db/schema";
+import { useLocation } from "wouter";
 
 export default function HomePage() {
   const { user, logout, isLoading } = useUser();
+  const [, setLocation] = useLocation();
 
   const handleLogout = async () => {
     try {

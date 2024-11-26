@@ -332,7 +332,7 @@ export function setupAuth(app: Express) {
       }
       
       if (userId) {
-        const store = req.sessionStore as typeof MemoryStore;
+        const store = req.sessionStore;
         store.all((error: any, sessions: any) => {
           if (error) return;
           
