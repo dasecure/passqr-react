@@ -8,10 +8,10 @@ type RequestResult = {
   message: string;
 };
 
-async function handleRequest(
+async function handleRequest<T>(
   url: string,
   method: string,
-  body?: InsertUser
+  body?: T
 ): Promise<RequestResult> {
   try {
     const response = await fetch(url, {
@@ -66,8 +66,16 @@ export function useUser() {
     retry: false
   });
 
-  const loginMutation = useMutation<RequestResult, Error, Pick<InsertUser, 'username' | 'password'>>({
-    mutationFn: (userData) => handleRequest('/api/login', 'POST', userData),
+  const loginMutation = useMutation<
+    RequestResult,
+    Error,
+    Pick<InsertUser, 'username' | 'password'>
+  >({
+    mutationFn: (userData) => handleRequest<Pick<InsertUser, 'username' | 'password'>>(
+      '/api/login',
+      'POST',
+      userData
+    ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user'] });
     },
@@ -81,7 +89,7 @@ export function useUser() {
   });
 
   const registerMutation = useMutation<RequestResult, Error, InsertUser>({
-    mutationFn: (userData) => handleRequest('/api/register', 'POST', userData),
+    mutationFn: (userData) => handleRequest<InsertUser>('/api/register', 'POST', userData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user'] });
     },
