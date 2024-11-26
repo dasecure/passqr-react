@@ -58,7 +58,7 @@ declare module "express-session" {
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
-  trustProxy: true,
+  trustProxies: true,
   standardHeaders: true,
   legacyHeaders: false,
   // Add custom key generator to avoid X-Forwarded-For issues
@@ -332,7 +332,7 @@ export function setupAuth(app: Express) {
       }
       
       if (userId) {
-        const store = req.sessionStore as MemoryStore;
+        const store = req.sessionStore as typeof MemoryStore;
         store.all((error: any, sessions: any) => {
           if (error) return;
           

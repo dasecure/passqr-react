@@ -9,6 +9,7 @@ export default function HomePage() {
   const handleLogout = async () => {
     try {
       await logout();
+      setLocation("/auth");
     } catch (error) {
       console.error('Logout failed:', error);
     }
