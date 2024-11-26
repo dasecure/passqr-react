@@ -7,7 +7,6 @@ import { users, passwordResetTokens } from "@db/schema";
 import { eq } from "drizzle-orm";
 import { isAfter, addHours } from "date-fns";
 import nodemailer from "nodemailer";
-import type { Error as NodemailerError } from 'nodemailer';
 import { rateLimit } from "express-rate-limit";
 import { and } from "drizzle-orm";
 
@@ -33,12 +32,25 @@ async function sendPasswordResetEmail(email: string, token: string) {
 
   // Create transport
   console.log('Creating nodemailer transport');
+  console.log('Email configuration:', {
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,
+    auth: {
+      user: process.env.GMAIL_USER ? 'configured' : 'missing',
+      pass: process.env.GMAIL_APP_PASSWORD ? 'configured' : 'missing'
+    }
+  });
+
   const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,
     auth: {
       user: process.env.GMAIL_USER,
       pass: process.env.GMAIL_APP_PASSWORD
-    }
+    },
+    debug: true // Enable debug logs
   });
 
   // Verify transporter configuration
