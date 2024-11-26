@@ -20,6 +20,13 @@ const passwordResetLimiter = rateLimit({
 });
 
 async function sendPasswordResetEmail(email: string, token: string) {
+  // Log environment configuration
+  console.log('Starting password reset email process');
+  console.log('Gmail user configured:', !!process.env.GMAIL_USER);
+  console.log('Gmail password configured:', !!process.env.GMAIL_APP_PASSWORD);
+
+  // Create transport
+  console.log('Creating nodemailer transport');
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
@@ -30,16 +37,23 @@ async function sendPasswordResetEmail(email: string, token: string) {
 
   // Verify transporter configuration
   try {
+    console.log('Verifying SMTP configuration...');
     await transporter.verify();
-    console.log('SMTP connection verified successfully');
+    console.log('SMTP verification successful');
   } catch (error) {
-    console.error('SMTP verification failed:', error);
-    throw new Error('Failed to connect to email server');
+    console.error('SMTP verification failed with error:', {
+      name: error.name,
+      message: error.message,
+      code: error.code,
+      command: error.command
+    });
+    throw error;
   }
 
   const resetUrl = `${process.env.PUBLIC_URL || 'http://localhost:5000'}/auth?token=${token}`;
 
   try {
+    console.log('Attempting to send email to:', email);
     const info = await transporter.sendMail({
       from: process.env.GMAIL_USER,
       to: email,
@@ -52,10 +66,17 @@ async function sendPasswordResetEmail(email: string, token: string) {
         <p>If you didn't request this, please ignore this email.</p>
       `
     });
-    console.log('Password reset email sent successfully:', info.messageId);
+    console.log('Email sent successfully');
+    console.log('Message ID:', info.messageId);
+    console.log('Response:', info.response);
   } catch (error) {
-    console.error('Failed to send password reset email:', error);
-    throw new Error('Failed to send password reset email');
+    console.error('Email sending failed with error:', {
+      name: error.name,
+      message: error.message,
+      code: error.code,
+      command: error.command
+    });
+    throw error;
   }
 }
 
