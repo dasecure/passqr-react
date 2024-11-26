@@ -345,8 +345,8 @@ export function setupAuth(app: Express) {
       }
       
       if (userId && req.sessionStore) {
-        const store = req.sessionStore;
-        store.all((error: any, sessions: any) => {
+        const store = req.sessionStore as Express.SessionStore;
+        store.all?.((error: any, sessions: any) => {
           if (error) return;
           
           Object.entries(sessions).forEach(([sid, session]: [string, any]) => {
