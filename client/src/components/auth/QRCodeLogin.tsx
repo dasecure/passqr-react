@@ -67,12 +67,14 @@ export default function QRCodeLogin() {
   const verifyMutation = useMutation({
     mutationFn: (token: string) => verifyQRCode(token),
     onSuccess: (data) => {
-      setVerificationStatus("success");
-      toast({
-        title: "Success",
-        description: "QR code login successful",
-      });
-      setTimeout(() => setLocation("/"), 1500);
+      if (data.success) {
+        setVerificationStatus("success");
+        toast({
+          title: "Success",
+          description: "QR code login successful",
+        });
+        setTimeout(() => setLocation("/"), 1500);
+      }
     },
     onError: (error) => {
       setVerificationStatus("error");

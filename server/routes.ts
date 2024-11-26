@@ -154,23 +154,20 @@ export function registerRoutes(app: Express) {
     }
 
     try {
+      // Get token with user information
       const [qrToken] = await db
-        .select()
+        .select({
+          id: qrTokens.id,
+          userId: qrTokens.userId,
+          used: qrTokens.used,
+          expiresAt: qrTokens.expiresAt
+        })
         .from(qrTokens)
-        .where(
-          and(
-            eq(qrTokens.token, token),
-            eq(qrTokens.used, 0)
-          )
-        )
+        .where(eq(qrTokens.token, token))
         .limit(1);
 
-      if (!qrToken || qrToken.used === 1) {
-        return res.status(400).send("Invalid or expired token");
-      }
-
-      if (!qrToken.userId) {
-        return res.status(400).send("Token not yet linked to a user");
+      if (!qrToken) {
+        return res.status(400).send("Invalid token");
       }
 
       if (isAfter(new Date(), qrToken.expiresAt)) {
@@ -181,35 +178,40 @@ export function registerRoutes(app: Express) {
         return res.status(400).send("Token has expired");
       }
 
-      // If token is valid, update it as used
+      if (qrToken.used === 1) {
+        return res.status(400).send("Token has already been used");
+      }
+
+      if (!qrToken.userId) {
+        return res.status(400).send("Token not yet linked");
+      }
+
+      // Get user information
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, qrToken.userId))
+        .limit(1);
+
+      if (!user) {
+        return res.status(400).send("User not found");
+      }
+
+      // Mark token as used
       await db
         .update(qrTokens)
         .set({ used: 1 })
         .where(eq(qrTokens.id, qrToken.id));
 
-      // Create session for the user
-      if (qrToken.userId) {
-        const [user] = await db
-          .select()
-          .from(users)
-          .where(eq(users.id, qrToken.userId))
-          .limit(1);
-
-        if (user) {
-          req.login(user, (err) => {
-            if (err) {
-              return res.status(500).send("Login failed");
-            }
-            return res.json({ success: true, user: { id: user.id, username: user.username } });
-          });
-        } else {
-          res.status(400).send("User not found");
+      // Log in the user
+      req.login(user, (err) => {
+        if (err) {
+          return res.status(500).send("Login failed");
         }
-      } else {
-        res.status(400).send("Token not associated with a user");
-      }
+        return res.json({ success: true, user: { id: user.id, username: user.username } });
+      });
     } catch (error) {
-      console.error('QR token verification error:', error);
+      console.error('QR verification error:', error);
       res.status(500).send('Failed to verify QR code');
     }
   });
