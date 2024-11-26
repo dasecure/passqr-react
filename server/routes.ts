@@ -7,8 +7,14 @@ import { users, passwordResetTokens } from "@db/schema";
 import { eq } from "drizzle-orm";
 import { isAfter, addHours } from "date-fns";
 import nodemailer from "nodemailer";
+import type { Error as NodemailerError } from 'nodemailer';
 import { rateLimit } from "express-rate-limit";
 import { and } from "drizzle-orm";
+
+interface EmailError extends Error {
+  code?: string;
+  command?: string;
+}
 
 // Rate limiter for password reset attempts
 const passwordResetLimiter = rateLimit({
@@ -41,19 +47,22 @@ async function sendPasswordResetEmail(email: string, token: string) {
     await transporter.verify();
     console.log('SMTP verification successful');
   } catch (error) {
+    const emailError = error as EmailError;
     console.error('SMTP verification failed with error:', {
-      name: error.name,
-      message: error.message,
-      code: error.code,
-      command: error.command
+      name: emailError.name,
+      message: emailError.message,
+      code: emailError.code,
+      command: emailError.command
     });
-    throw error;
+    throw new Error('Failed to verify SMTP configuration: ' + emailError.message);
   }
 
   const resetUrl = `${process.env.PUBLIC_URL || 'http://localhost:5000'}/auth?token=${token}`;
 
   try {
     console.log('Attempting to send email to:', email);
+    console.log('Reset URL:', resetUrl);
+    
     const info = await transporter.sendMail({
       from: process.env.GMAIL_USER,
       to: email,
@@ -66,17 +75,19 @@ async function sendPasswordResetEmail(email: string, token: string) {
         <p>If you didn't request this, please ignore this email.</p>
       `
     });
+    
     console.log('Email sent successfully');
     console.log('Message ID:', info.messageId);
-    console.log('Response:', info.response);
+    console.log('Preview URL:', nodemailer.getTestMessageUrl(info));
   } catch (error) {
+    const emailError = error as EmailError;
     console.error('Email sending failed with error:', {
-      name: error.name,
-      message: error.message,
-      code: error.code,
-      command: error.command
+      name: emailError.name,
+      message: emailError.message,
+      code: emailError.code,
+      command: emailError.command
     });
-    throw error;
+    throw new Error('Failed to send password reset email: ' + emailError.message);
   }
 }
 
@@ -105,6 +116,7 @@ export function setupRoutes(app: Express) {
   app.post("/api/reset-password", passwordResetLimiter, async (req, res) => {
     const { email } = req.body;
     console.log('Password reset requested for email:', email);
+    
     if (!email) {
       return res.status(400).send("Email is required");
     }
@@ -145,13 +157,18 @@ export function setupRoutes(app: Express) {
         used: 0,
       });
 
-      // Send password reset email
-      await sendPasswordResetEmail(email, token);
+      // Send password reset email with better error handling
+      try {
+        await sendPasswordResetEmail(email, token);
+      } catch (error) {
+        console.error('Failed to send password reset email:', error);
+        return res.status(500).send("Failed to send password reset email. Please try again later.");
+      }
 
       res.json({ message: "If an account exists with that email, you will receive a password reset link." });
     } catch (error) {
       console.error("Password reset error:", error);
-      res.status(500).send("Internal server error");
+      res.status(500).send("An error occurred while processing your request");
     }
   });
 
