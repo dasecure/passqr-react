@@ -84,10 +84,9 @@ export function setupAuth(app: Express) {
   app.use(session(sessionSettings));
   app.use(csrf({ 
     cookie: true,
-    ignoreMethods: ['GET'],  // Allow GET requests without CSRF
-    // Add OAuth callback path to ignored URLs
-    ignorePath: (req) => {
-      return req.path.startsWith('/api/auth/google');
+    ignoreMethods: ['GET', 'HEAD', 'OPTIONS'],
+    value: (req) => {
+      return req.headers['x-csrf-token'] as string;
     }
   }));
   app.use(passport.initialize());
@@ -132,7 +131,7 @@ export function setupAuth(app: Express) {
   passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID!,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    callbackURL: "/api/auth/google/callback",
+    callbackURL: `${process.env.PUBLIC_URL || 'http://localhost:5000'}/api/auth/google/callback`,
     scope: ["email", "profile"]
   }, async (accessToken: string, refreshToken: string, profile: any, done: (error: any, user?: any) => void) => {
     try {
@@ -272,7 +271,12 @@ export function setupAuth(app: Express) {
   });
 
   // Google OAuth routes
-  app.get("/api/auth/google", passport.authenticate("google"));
+  app.get("/api/auth/google", (req, res, next) => {
+    passport.authenticate("google", {
+      scope: ["email", "profile"],
+      prompt: "select_account"
+    })(req, res, next);
+  });
 
   app.get(
     "/api/auth/google/callback",
