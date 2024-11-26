@@ -1,13 +1,10 @@
 import passport from "passport";
-import { IVerifyOptions, Strategy as LocalStrategy } from "passport-local";
-import { type Express, Request } from "express";
+import { Strategy as LocalStrategy } from "passport-local";
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
+import { type Express, type Request, type IVerifyOptions } from "express";
 import session from "express-session";
 import cookieParser from "cookie-parser";
 import csrf from "csurf";
-
-interface CustomRequest extends Request {
-  csrfToken(): string;
-}
 import createMemoryStore from "memorystore";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
@@ -15,10 +12,9 @@ import { users, insertUserSchema, loginUserSchema, type User as SelectUser } fro
 import { db } from "../db";
 import { eq } from "drizzle-orm";
 import { rateLimit } from "express-rate-limit";
-import { addHours, isAfter } from "date-fns";
-import { passwordResetTokens } from "@db/schema";
 
 const scryptAsync = promisify(scrypt);
+
 export const crypto = {
   hash: async (password: string) => {
     const salt = randomBytes(16).toString("hex");
@@ -39,20 +35,17 @@ export const crypto = {
 
 declare global {
   namespace Express {
-    interface User extends SelectUser { }
+    interface User extends SelectUser {}
   }
 }
-  
 
-  // Rate limiter for failed login attempts
-  const loginLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5, // Limit each IP to 5 requests per 15 minutes
-    message: "Too many login attempts. Please try again later.",
-    standardHeaders: true,
-    legacyHeaders: false,
-  });
-
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: "Too many login attempts. Please try again later.",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 export function setupAuth(app: Express) {
   const MemoryStore = createMemoryStore(session);
@@ -84,41 +77,78 @@ export function setupAuth(app: Express) {
   app.use(csrf({ cookie: true }));
   app.use(passport.initialize());
   app.use(passport.session());
-  
+
   // CSRF token middleware
-  app.use((req: CustomRequest, res, next) => {
+  app.use((req: Request & { csrfToken: () => string }, res, next) => {
     res.cookie("XSRF-TOKEN", req.csrfToken());
     next();
   });
-  
+
   // Error handler for CSRF token errors
   app.use((err: any, req: any, res: any, next: any) => {
     if (err.code !== 'EBADCSRFTOKEN') return next(err);
     res.status(403).json({ error: 'Invalid CSRF token' });
   });
 
-  passport.use(
-    new LocalStrategy(async (username, password, done) => {
-      try {
-        const [user] = await db
-          .select()
-          .from(users)
-          .where(eq(users.username, username))
-          .limit(1);
+  // Local Strategy
+  passport.use(new LocalStrategy(async (username, password, done) => {
+    try {
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.username, username))
+        .limit(1);
 
-        if (!user) {
-          return done(null, false, { message: "Incorrect username." });
-        }
-        const isMatch = await crypto.compare(password, user.password);
-        if (!isMatch) {
-          return done(null, false, { message: "Incorrect password." });
-        }
-        return done(null, user);
-      } catch (err) {
-        return done(err);
+      if (!user || !user.password) {
+        return done(null, false, { message: "Incorrect username or password." });
       }
-    })
-  );
+      
+      const isMatch = await crypto.compare(password, user.password);
+      if (!isMatch) {
+        return done(null, false, { message: "Incorrect username or password." });
+      }
+      return done(null, user);
+    } catch (err) {
+      return done(err);
+    }
+  }));
+
+  // Google Strategy
+  passport.use(new GoogleStrategy({
+    clientID: process.env.GOOGLE_CLIENT_ID!,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    callbackURL: "/api/auth/google/callback",
+    scope: ["email", "profile"]
+  }, async (accessToken, refreshToken, profile, done) => {
+    try {
+      // Check if user exists
+      const [existingUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.googleId, profile.id))
+        .limit(1);
+
+      if (existingUser) {
+        return done(null, existingUser);
+      }
+
+      // Create new user
+      const [newUser] = await db
+        .insert(users)
+        .values({
+          username: profile.displayName || profile.emails?.[0]?.value?.split("@")[0] || profile.id,
+          email: profile.emails?.[0]?.value || `${profile.id}@google.com`,
+          googleId: profile.id,
+          avatarUrl: profile.photos?.[0]?.value,
+          provider: "google"
+        })
+        .returning();
+
+      return done(null, newUser);
+    } catch (error) {
+      return done(error as Error);
+    }
+  }));
 
   passport.serializeUser((user, done) => {
     done(null, user.id);
@@ -170,14 +200,15 @@ export function setupAuth(app: Express) {
         return res.status(400).send("Username already exists");
       }
 
-      const hashedPassword = await crypto.hash(password);
+      const hashedPassword = password ? await crypto.hash(password) : null;
 
       const [newUser] = await db
         .insert(users)
         .values({
           username,
           password: hashedPassword,
-          email: result.data.email,
+          email,
+          provider: "local"
         })
         .returning();
 
@@ -195,7 +226,7 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/login", (req, res, next) => {
+  app.post("/api/login", loginLimiter, (req, res, next) => {
     const result = loginUserSchema.safeParse(req.body);
     if (!result.success) {
       return res
@@ -225,12 +256,22 @@ export function setupAuth(app: Express) {
     })(req, res, next);
   });
 
+  // Google OAuth routes
+  app.get("/api/auth/google", passport.authenticate("google"));
+
+  app.get(
+    "/api/auth/google/callback",
+    passport.authenticate("google", { failureRedirect: "/auth" }),
+    (req, res) => {
+      res.redirect("/");
+    }
+  );
+
   app.post("/api/logout", (req, res) => {
     req.logout((err) => {
       if (err) {
         return res.status(500).send("Logout failed");
       }
-
       res.json({ message: "Logout successful" });
     });
   });
@@ -239,7 +280,6 @@ export function setupAuth(app: Express) {
     if (req.isAuthenticated()) {
       return res.json(req.user);
     }
-
     res.status(401).send("Not logged in");
   });
 }

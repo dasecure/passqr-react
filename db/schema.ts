@@ -5,8 +5,11 @@ import { z } from "zod";
 export const users = pgTable("users", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
   username: text("username").unique().notNull(),
-  password: text("password").notNull(),
+  password: text("password"),
   email: text("email").unique().notNull(),
+  googleId: text("google_id").unique(),
+  avatarUrl: text("avatar_url"),
+  provider: text("provider").default("local"),
 });
 
 export const passwordResetTokens = pgTable("password_reset_tokens", {
@@ -19,11 +22,15 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
 
 export const insertUserSchema = createInsertSchema(users, {
   email: z.string().email(),
+  password: z.string().optional(),
+  provider: z.enum(['local', 'google']).default('local'),
+  googleId: z.string().optional(),
+  avatarUrl: z.string().optional(),
 });
 export const loginUserSchema = createInsertSchema(users, {
   username: z.string(),
   password: z.string(),
-}).omit({ email: true });
+}).omit({ email: true, provider: true, googleId: true, avatarUrl: true });
 export const selectUserSchema = createSelectSchema(users);
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = z.infer<typeof selectUserSchema>;
