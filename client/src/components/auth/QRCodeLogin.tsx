@@ -56,7 +56,7 @@ export default function QRCodeLogin() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { user } = useUser();
-  const [verificationStatus, setVerificationStatus] = useState<"pending" | "success" | "error">("pending");
+  const [verificationStatus, setVerificationStatus] = useState<"pending" | "success" | "error" | "linking">("pending");
 
   const { data: token, isLoading: isGenerating, error: generateError } = useQuery({
     queryKey: ["qrCode"],
@@ -79,12 +79,16 @@ export default function QRCodeLogin() {
       }
     },
     onError: (error) => {
-      setVerificationStatus("error");
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to verify QR code",
-      });
+      if (error instanceof Error && error.message === "Token not yet linked") {
+        setVerificationStatus("linking");
+      } else {
+        setVerificationStatus("error");
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: error instanceof Error ? error.message : "Failed to verify QR code",
+        });
+      }
     },
   });
 
@@ -142,9 +146,19 @@ export default function QRCodeLogin() {
           </div>
         )}
       </Card>
-      <div className="text-center text-sm text-muted-foreground">
-        {verificationStatus === "pending" && "Keep this page open while scanning"}
-        {verificationStatus === "error" && "Failed to verify QR code. Please try again."}
+      <div className="text-center text-sm">
+        {verificationStatus === "pending" && 
+          <span className="text-muted-foreground">Keep this page open while scanning</span>
+        }
+        {verificationStatus === "linking" && 
+          <span className="text-green-600">Waiting for mobile device to complete login...</span>
+        }
+        {verificationStatus === "error" && 
+          <span className="text-destructive">Failed to verify QR code. Please try again.</span>
+        }
+        {verificationStatus === "success" && 
+          <span className="text-primary">Login successful! Redirecting...</span>
+        }
       </div>
     </div>
   );
