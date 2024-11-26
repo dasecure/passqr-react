@@ -82,7 +82,14 @@ export function setupAuth(app: Express) {
 
   app.use(cookieParser());
   app.use(session(sessionSettings));
-  app.use(csrf({ cookie: true }));
+  app.use(csrf({ 
+    cookie: true,
+    ignoreMethods: ['GET'],  // Allow GET requests without CSRF
+    // Add OAuth callback path to ignored URLs
+    ignorePath: (req) => {
+      return req.path.startsWith('/api/auth/google');
+    }
+  }));
   app.use(passport.initialize());
   app.use(passport.session());
 
