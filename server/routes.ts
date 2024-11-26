@@ -165,8 +165,12 @@ export function registerRoutes(app: Express) {
         )
         .limit(1);
 
-      if (!qrToken) {
+      if (!qrToken || qrToken.used === 1) {
         return res.status(400).send("Invalid or expired token");
+      }
+
+      if (!qrToken.userId) {
+        return res.status(400).send("Token not yet linked to a user");
       }
 
       if (isAfter(new Date(), qrToken.expiresAt)) {

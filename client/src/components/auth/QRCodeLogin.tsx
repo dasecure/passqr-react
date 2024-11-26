@@ -121,7 +121,7 @@ export default function QRCodeLogin() {
     );
   }
 
-  const qrValue = `${window.location.origin}/qr/${token}`;
+  const qrValue = `${window.location.origin}/qr/link/${token}`;
 
   return (
     <div className="space-y-4">
