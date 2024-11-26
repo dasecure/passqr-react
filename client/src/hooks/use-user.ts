@@ -14,9 +14,23 @@ async function handleRequest<T>(
   body?: T
 ): Promise<RequestResult> {
   try {
+    // Get CSRF token from cookie
+    const csrfToken = document.cookie
+      .split('; ')
+      .find(row => row.startsWith('XSRF-TOKEN'))
+      ?.split('=')[1];
+
+    const headers: HeadersInit = {
+      'X-CSRF-Token': csrfToken || '',
+    };
+
+    if (body) {
+      headers['Content-Type'] = 'application/json';
+    }
+
     const response = await fetch(url, {
       method,
-      headers: body ? { "Content-Type": "application/json" } : undefined,
+      headers,
       body: body ? JSON.stringify(body) : undefined,
       credentials: "include",
     });

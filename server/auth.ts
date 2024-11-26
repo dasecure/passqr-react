@@ -2,6 +2,8 @@ import passport from "passport";
 import { IVerifyOptions, Strategy as LocalStrategy } from "passport-local";
 import { type Express } from "express";
 import session from "express-session";
+import cookieParser from "cookie-parser";
+import csrf from "csurf";
 import createMemoryStore from "memorystore";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
@@ -54,22 +56,41 @@ export function setupAuth(app: Express) {
     secret: process.env.REPL_ID || "porygon-supremacy",
     resave: false,
     saveUninitialized: false,
-    cookie: {},
+    name: 'sessionId', // Custom session cookie name
+    cookie: {
+      httpOnly: true,
+      sameSite: 'strict',
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    },
     store: new MemoryStore({
-      checkPeriod: 86400000,
+      checkPeriod: 86400000, // Cleanup expired sessions
     }),
   };
 
   if (app.get("env") === "production") {
     app.set("trust proxy", 1);
-    sessionSettings.cookie = {
-      secure: true,
-    };
+    if (sessionSettings.cookie) {
+      sessionSettings.cookie.secure = true;
+    }
   }
 
+  app.use(cookieParser());
   app.use(session(sessionSettings));
+  app.use(csrf({ cookie: true }));
   app.use(passport.initialize());
   app.use(passport.session());
+  
+  // CSRF token middleware
+  app.use((req, res, next) => {
+    res.cookie("XSRF-TOKEN", req.csrfToken());
+    next();
+  });
+  
+  // Error handler for CSRF token errors
+  app.use((err: any, req: any, res: any, next: any) => {
+    if (err.code !== 'EBADCSRFTOKEN') return next(err);
+    res.status(403).json({ error: 'Invalid CSRF token' });
+  });
 
   passport.use(
     new LocalStrategy(async (username, password, done) => {
