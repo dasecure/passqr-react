@@ -8,11 +8,13 @@ import { useUser } from "../../hooks/use-user";
 import { insertUserSchema, loginUserSchema, type InsertUser } from "@db/schema";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { useLocation } from "wouter";
 
 export default function LoginForm() {
   const [isRegistering, setIsRegistering] = useState(false);
   const { login, register } = useUser();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
   const form = useForm<InsertUser>({
     resolver: zodResolver(isRegistering ? insertUserSchema : loginUserSchema),
