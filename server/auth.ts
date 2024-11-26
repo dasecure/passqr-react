@@ -148,9 +148,8 @@ export function setupAuth(app: Express) {
   passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID!,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    callbackURL: "/api/auth/google/callback",  // Use relative URL
-    scope: ["email", "profile"],
-    proxy: true  // Enable proxy support
+    callbackURL: `${process.env.PUBLIC_URL || 'http://localhost:5000'}/api/auth/google/callback`,
+    scope: ["email", "profile"]
   }, async (accessToken: string, refreshToken: string, profile: any, done: (error: any, user?: any) => void) => {
     try {
       // Check if user exists
@@ -290,40 +289,17 @@ export function setupAuth(app: Express) {
 
   // Google OAuth routes
   app.get("/api/auth/google", (req, res, next) => {
-    req.session.authState = Math.random().toString(36).substring(7);
     passport.authenticate("google", {
       scope: ["email", "profile"],
-      prompt: "select_account",
-      state: req.session.authState
+      prompt: "select_account"
     })(req, res, next);
   });
 
-  app.get(
-    "/api/auth/google/callback",
-    (req, res, next) => {
-      passport.authenticate("google", (err: any, user: Express.User | false, info: any) => {
-        if (err) {
-          console.error("Google OAuth Error:", err);
-          return res.redirect("/auth?error=oauth_error");
-        }
-
-        if (!user) {
-          console.error("Google OAuth failed:", info);
-          return res.redirect("/auth?error=oauth_failed");
-        }
-
-        req.logIn(user, (loginErr) => {
-          if (loginErr) {
-            console.error("Login Error:", loginErr);
-            return res.redirect("/auth?error=login_error");
-          }
-
-          // Set a session flag for successful OAuth login
-          req.session.loginMethod = "google";
-          return res.redirect("/");
-        });
-      })(req, res, next);
-    }
+  app.get("/api/auth/google/callback",
+    passport.authenticate("google", {
+      failureRedirect: "/auth?error=oauth_failed",
+      successRedirect: "/"
+    })
   );
 
   app.post("/api/logout", (req, res) => {
