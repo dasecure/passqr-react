@@ -25,22 +25,25 @@ const passwordResetLimiter = rateLimit({
 });
 
 async function sendPasswordResetEmail(email: string, token: string) {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] Starting email process...`);
+  
   // Log environment configuration
-  console.log('Starting password reset email process');
-  console.log('Gmail user configured:', !!process.env.GMAIL_USER);
-  console.log('Gmail password configured:', !!process.env.GMAIL_APP_PASSWORD);
+  console.log(`[${timestamp}] Checking email configuration...`);
+  console.log(`[${timestamp}] Gmail user configured:`, !!process.env.GMAIL_USER);
+  console.log(`[${timestamp}] Gmail password configured:`, !!process.env.GMAIL_APP_PASSWORD);
 
-  // Connection debugging
-  console.log('Testing Gmail connection configuration...');
-  console.log('Using smtp.gmail.com with port 587');
-  console.log('Transport configuration test starting...');
-  console.log('Email configuration:', {
+  // Connection debugging with detailed SMTP configuration
+  console.log(`[${timestamp}] SMTP Configuration:`, {
     host: 'smtp.gmail.com',
     port: 587,
     secure: false,
     auth: {
       user: process.env.GMAIL_USER ? 'configured' : 'missing',
       pass: process.env.GMAIL_APP_PASSWORD ? 'configured' : 'missing'
+    },
+    tls: {
+      rejectUnauthorized: true
     }
   });
 
@@ -84,8 +87,10 @@ async function sendPasswordResetEmail(email: string, token: string) {
   const resetUrl = `${process.env.PUBLIC_URL || 'http://localhost:5000'}/auth?token=${token}`;
 
   try {
-    console.log('Attempting to send email to:', email);
-    console.log('Reset URL:', resetUrl);
+    const sendTimestamp = new Date().toISOString();
+    console.log(`[${sendTimestamp}] Initiating email sending process...`);
+    console.log(`[${sendTimestamp}] Preparing to send email to:`, email);
+    console.log(`[${sendTimestamp}] Generated reset URL:`, resetUrl);
     
     const info = await transporter.sendMail({
       from: process.env.GMAIL_USER,
@@ -100,9 +105,11 @@ async function sendPasswordResetEmail(email: string, token: string) {
       `
     });
     
-    console.log('Email sent successfully');
-    console.log('Message ID:', info.messageId);
-    console.log('Preview URL:', nodemailer.getTestMessageUrl(info));
+    const successTimestamp = new Date().toISOString();
+    console.log(`[${successTimestamp}] Email sent successfully`);
+    console.log(`[${successTimestamp}] Message ID:`, info.messageId);
+    console.log(`[${successTimestamp}] Preview URL:`, nodemailer.getTestMessageUrl(info));
+    console.log(`[${successTimestamp}] Email sending process completed`);
   } catch (error) {
     const emailError = error as EmailError;
     console.error('Email sending failed with error:', {
