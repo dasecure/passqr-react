@@ -1,7 +1,8 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
-import { type Express, type Request, type IVerifyOptions } from "express";
+import { type Express, type Request } from "express";
+import { type IVerifyOptions } from "passport-local";
 import session from "express-session";
 import cookieParser from "cookie-parser";
 import csrf from "csurf";
@@ -36,6 +37,13 @@ export const crypto = {
 declare global {
   namespace Express {
     interface User extends SelectUser {}
+  }
+}
+
+// Define session type outside global namespace
+declare module "express-session" {
+  interface SessionData {
+    loginMethod?: "google" | "local";
   }
 }
 
@@ -261,9 +269,29 @@ export function setupAuth(app: Express) {
 
   app.get(
     "/api/auth/google/callback",
-    passport.authenticate("google", { failureRedirect: "/auth" }),
-    (req, res) => {
-      res.redirect("/");
+    (req, res, next) => {
+      passport.authenticate("google", (err: any, user: Express.User | false, info: any) => {
+        if (err) {
+          console.error("Google OAuth Error:", err);
+          return res.redirect("/auth?error=oauth_error");
+        }
+
+        if (!user) {
+          console.error("Google OAuth failed:", info);
+          return res.redirect("/auth?error=oauth_failed");
+        }
+
+        req.logIn(user, (loginErr) => {
+          if (loginErr) {
+            console.error("Login Error:", loginErr);
+            return res.redirect("/auth?error=login_error");
+          }
+
+          // Set a session flag for successful OAuth login
+          req.session.loginMethod = "google";
+          return res.redirect("/");
+        });
+      })(req, res, next);
     }
   );
 

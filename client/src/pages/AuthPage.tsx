@@ -1,11 +1,34 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import LoginForm from "../components/auth/LoginForm";
 import QRCodeLogin from "../components/auth/QRCodeLogin";
 import PasswordResetForm from "../components/auth/PasswordResetForm";
 import { motion } from "framer-motion";
+import { useToast } from "@/hooks/use-toast";
 
 export default function AuthPage() {
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const error = params.get('error');
+    
+    if (error) {
+      const errorMessages: Record<string, string> = {
+        'oauth_error': 'An error occurred during Google sign in',
+        'oauth_failed': 'Google sign in failed',
+        'login_error': 'Unable to complete login'
+      };
+      
+      toast({
+        variant: "destructive",
+        title: "Authentication Error",
+        description: errorMessages[error] || 'An error occurred'
+      });
+    }
+  }, [toast]);
+
   return (
     <div className="container flex items-center justify-center min-h-screen py-8">
       <motion.div

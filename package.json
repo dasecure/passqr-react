@@ -46,6 +46,7 @@
     "@types/cookie-parser": "^1.4.8",
     "@types/csurf": "^1.11.5",
     "@types/nodemailer": "^6.4.17",
+    "@types/passport-google-oauth20": "^2.0.16",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
