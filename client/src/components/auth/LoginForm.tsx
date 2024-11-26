@@ -19,7 +19,7 @@ export default function LoginForm() {
     defaultValues: {
       username: "",
       password: "",
-      ...(isRegistering ? { email: "" } : {}),
+      email: "",
     },
   });
 

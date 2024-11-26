@@ -1,11 +1,54 @@
 import { type Express } from "express";
 import { setupAuth } from "./auth";
-
 import { randomBytes } from "crypto";
 import { crypto } from "./auth";
 import { db } from "../db";
 import { users, passwordResetTokens } from "@db/schema";
 import { eq } from "drizzle-orm";
+import { isAfter, addHours } from "date-fns";
+import nodemailer from "nodemailer";
+import { rateLimit } from "express-rate-limit";
+import { and } from "drizzle-orm";
+
+// Rate limiter for password reset attempts
+const passwordResetLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3, // Limit each IP to 3 requests per hour
+  message: "Too many password reset attempts. Please try again in an hour.",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+async function sendPasswordResetEmail(email: string, token: string) {
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_APP_PASSWORD
+    }
+  });
+
+  const resetUrl = `${process.env.PUBLIC_URL || 'http://localhost:5000'}/auth?token=${token}`;
+
+  try {
+    await transporter.sendMail({
+      from: process.env.GMAIL_USER,
+      to: email,
+      subject: 'Password Reset Request',
+      html: `
+        <h1>Password Reset Request</h1>
+        <p>Click the link below to reset your password:</p>
+        <a href="${resetUrl}">Reset Password</a>
+        <p>This link will expire in 1 hour.</p>
+        <p>If you didn't request this, please ignore this email.</p>
+      `
+    });
+    console.log('Password reset email sent successfully');
+  } catch (error) {
+    console.error('Failed to send password reset email:', error);
+    throw new Error('Failed to send password reset email');
+  }
+}
 
 export function registerRoutes(app: Express) {
   // Set up authentication routes
@@ -19,9 +62,15 @@ export function registerRoutes(app: Express) {
   });
 
   app.post("/api/qr/verify", (req, res) => {
-    // In a real implementation, this would verify the QR code token
     const { token } = req.body;
     if (!token) {
+      return res.status(400).send("Token is required");
+    }
+    res.json({ verified: true });
+  });
+}
+
+export function setupRoutes(app: Express) {
   // Password reset endpoints
   app.post("/api/reset-password", passwordResetLimiter, async (req, res) => {
     const { email } = req.body;
@@ -146,9 +195,5 @@ export function registerRoutes(app: Express) {
       console.error("Password reset error:", error);
       res.status(500).send("Internal server error");
     }
-  });
-      return res.status(400).send("Token is required");
-    }
-    res.json({ verified: true });
   });
 }

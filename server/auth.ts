@@ -1,4 +1,3 @@
-import { insertUserSchema, loginUserSchema } from "@db/schema";
 import passport from "passport";
 import { IVerifyOptions, Strategy as LocalStrategy } from "passport-local";
 import { type Express } from "express";
@@ -6,7 +5,7 @@ import session from "express-session";
 import createMemoryStore from "memorystore";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { users, insertUserSchema, type User as SelectUser } from "@db/schema";
+import { users, insertUserSchema, loginUserSchema, type User as SelectUser } from "@db/schema";
 import { db } from "../db";
 import { eq } from "drizzle-orm";
 import { rateLimit } from "express-rate-limit";
@@ -37,14 +36,7 @@ declare global {
     interface User extends SelectUser { }
   }
 }
-  // Rate limiter for password reset attempts
-  const passwordResetLimiter = rateLimit({
-    windowMs: 60 * 60 * 1000, // 1 hour
-    max: 3, // Limit each IP to 3 requests per hour
-    message: "Too many password reset attempts. Please try again in an hour.",
-    standardHeaders: true,
-    legacyHeaders: false,
-  });
+  
 
   // Rate limiter for failed login attempts
   const loginLimiter = rateLimit({
