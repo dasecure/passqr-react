@@ -94,7 +94,7 @@ export default function QRCodeLogin() {
     if (token && !user) {
       intervalId = setInterval(() => {
         verifyMutation.mutate(token);
-      }, 2000);
+      }, 3000); // Increase interval to 3 seconds
     }
 
     return () => {

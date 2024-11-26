@@ -58,12 +58,19 @@ declare module "express-session" {
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
-  message: "Too many login attempts. Please try again later.",
+  trustProxy: true,
   standardHeaders: true,
   legacyHeaders: false,
+  // Add custom key generator to avoid X-Forwarded-For issues
+  keyGenerator: (request) => {
+    return request.ip || request.connection.remoteAddress || '';
+  },
 });
 
 export function setupAuth(app: Express) {
+  // Add this before any middleware
+  app.enable('trust proxy');
+  
   const MemoryStore = createMemoryStore(session);
   const sessionSettings: session.SessionOptions = {
     secret: process.env.REPL_ID || "secure-session-secret",
