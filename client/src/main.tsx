@@ -7,6 +7,7 @@ import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import HomePage from "./pages/HomePage";
 import AuthPage from "./pages/AuthPage";
+import ProfilePage from "./pages/ProfilePage";
 import QRLinkHandler from "./components/auth/QRLinkHandler";
 import { Loader2 } from "lucide-react";
 import { useUser } from "./hooks/use-user";
@@ -32,6 +33,7 @@ function Router() {
       <Route path="/" component={HomePage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/qr/link/:token" component={QRLinkHandler} />
+      <Route path="/profile" component={ProfilePage} />
       <Route>404 Page Not Found</Route>
     </Switch>
   );

@@ -1,4 +1,4 @@
-import { pgTable, text, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -8,8 +8,14 @@ export const users = pgTable("users", {
   password: text("password"),
   email: text("email").unique().notNull(),
   googleId: text("google_id").unique(),
+  githubId: text("github_id").unique(),
   avatarUrl: text("avatar_url"),
   provider: text("provider").default("local"),
+  contactEmail: text("contact_email"),
+  phoneNumber: text("phone_number"),
+  interests: text("interests"),
+  bio: text("bio"),
+  socialLinks: jsonb("social_links").$type<Record<string, string>>().default({}),
 });
 
 export const passwordResetTokens = pgTable("password_reset_tokens", {
