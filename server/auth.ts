@@ -21,6 +21,8 @@ import { users, insertUserSchema, loginUserSchema, type User as SelectUser } fro
 import { db } from "../db";
 import { eq } from "drizzle-orm";
 import { rateLimit } from "express-rate-limit";
+import fetch from "node-fetch";
+import nodemailer from 'nodemailer';
 
 const scryptAsync = promisify(scrypt);
 
@@ -63,6 +65,22 @@ const loginLimiter = rateLimit({
   keyGenerator: (request) => {
     return request.ip || request.connection.remoteAddress || '';
   },
+});
+
+// Update this helper function
+function getCallbackURL() {
+  if (process.env.NODE_ENV === 'production') {
+    return `${process.env.PUBLIC_URL}/api/auth/google/callback`;
+  }
+  return 'http://localhost:5000/api/auth/google/callback';
+}
+
+const transporter = nodemailer.createTransport({
+  service: 'Gmail',
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASSWORD  // Use App Password, not regular password
+  }
 });
 
 export function setupAuth(app: Express) {
@@ -169,7 +187,7 @@ export function setupAuth(app: Express) {
   passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID!,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    callbackURL: "/api/auth/google/callback",
+    callbackURL: getCallbackURL(),
     proxy: true
   }, async (accessToken: string, refreshToken: string, profile: any, done: (error: any, user?: any) => void) => {
     try {
@@ -326,8 +344,41 @@ export function setupAuth(app: Express) {
       
       passport.authenticate("google", {
         failureRedirect: "/auth?error=oauth_failed",
-        successRedirect: "/"
       })(req, res, next);
+    },
+    async (req, res) => {
+      // Send both notifications
+      try {
+        // Send IOTPUSH notification
+        await fetch('https://ntfy.iotpush.com/passqr', {
+          method: 'POST',
+          body: `Alert: Login to PassQR from ${req.user?.email || 'unknown user'}`,
+          headers: {
+            'Title': 'Access detected',
+            'Priority': 'urgent',
+            'Tags': 'warning,skull'
+          }
+        });
+
+        // Send email notification
+        await transporter.sendMail({
+          from: process.env.GMAIL_USER,
+          to: process.env.GMAIL_USER,
+          subject: 'PassQR Login Alert',
+          text: `New login detected\nUser: ${req.user?.email || 'unknown user'}\nTime: ${new Date().toLocaleString()}`
+        });
+
+        console.log('Notifications sent successfully');
+      } catch (error) {
+        console.error('Failed to send notifications:', error);
+      }
+
+      // Redirect after sending notifications
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? process.env.PUBLIC_URL 
+        : 'http://localhost:5000';
+      
+      res.redirect(baseUrl || '/');
     }
   );
 

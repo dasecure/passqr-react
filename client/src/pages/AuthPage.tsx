@@ -1,69 +1,82 @@
-import { useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import LoginForm from "../components/auth/LoginForm";
-import QRCodeLogin from "../components/auth/QRCodeLogin";
-import PasswordResetForm from "../components/auth/PasswordResetForm";
-import { motion } from "framer-motion";
+import LoginForm from "@/components/auth/LoginForm";
+import QRCodeLogin from "@/components/auth/QRCodeLogin";
+import PasswordResetForm from "@/components/auth/PasswordResetForm";
 import { useToast } from "@/hooks/use-toast";
+import { useEffect } from "react";
+import { useLocation } from "wouter";
 
 export default function AuthPage() {
+  const [tab, setTab] = useState<string>("login");
   const { toast } = useToast();
+  const [location] = useLocation();
 
   useEffect(() => {
+    // Check for error query parameter
     const params = new URLSearchParams(window.location.search);
     const error = params.get('error');
-    
+    const token = params.get('token');
+
     if (error) {
-      const errorMessages: Record<string, string> = {
-        'oauth_error': 'An error occurred during Google sign in',
-        'oauth_failed': 'Google sign in failed',
-        'login_error': 'Unable to complete login'
-      };
-      
       toast({
         variant: "destructive",
         title: "Authentication Error",
-        description: errorMessages[error] || 'An error occurred'
+        description: error === 'oauth_failed' 
+          ? "Failed to authenticate with Google"
+          : "An error occurred during authentication",
       });
     }
-  }, [toast]);
+
+    // If reset token is present, switch to reset tab
+    if (token) {
+      setTab("reset");
+    }
+  }, [location, toast]);
 
   return (
-    <div className="container flex items-center justify-center min-h-screen py-8">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        className="w-full max-w-md"
-      >
-        <Card>
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center">Welcome back</CardTitle>
-            <CardDescription className="text-center">
-              Choose your preferred login method
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="password" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="password">Password</TabsTrigger>
-                <TabsTrigger value="reset">Reset</TabsTrigger>
-                <TabsTrigger value="qr">QR Code</TabsTrigger>
-              </TabsList>
-              <TabsContent value="password">
-                <LoginForm />
-              </TabsContent>
-              <TabsContent value="reset">
-                <PasswordResetForm />
-              </TabsContent>
-              <TabsContent value="qr">
-                <QRCodeLogin />
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
-      </motion.div>
+    <div className="container relative min-h-screen flex-col items-center justify-center grid lg:max-w-none lg:grid-cols-2 lg:px-0">
+      <div className="relative hidden h-full flex-col bg-muted p-10 text-white lg:flex dark:border-r">
+        <div className="absolute inset-0 bg-primary" />
+        <div className="relative z-20 flex items-center text-lg font-medium">
+          PassQR Authentication
+        </div>
+        <div className="relative z-20 mt-auto">
+          <blockquote className="space-y-2">
+            <p className="text-lg">
+              Secure, Multi-factor Authentication System
+            </p>
+          </blockquote>
+        </div>
+      </div>
+      <div className="p-4 lg:p-8 h-full flex items-center">
+        <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
+          <div className="flex flex-col space-y-2 text-center">
+            <h1 className="text-2xl font-semibold tracking-tight">
+              Welcome to PassQR
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Choose your preferred authentication method
+            </p>
+          </div>
+          <Tabs value={tab} onValueChange={setTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="login">Login</TabsTrigger>
+              <TabsTrigger value="qr">QR Code</TabsTrigger>
+              <TabsTrigger value="reset">Reset</TabsTrigger>
+            </TabsList>
+            <TabsContent value="login" className="mt-4">
+              <LoginForm />
+            </TabsContent>
+            <TabsContent value="qr" className="mt-4">
+              <QRCodeLogin />
+            </TabsContent>
+            <TabsContent value="reset" className="mt-4">
+              <PasswordResetForm />
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
     </div>
   );
 }
