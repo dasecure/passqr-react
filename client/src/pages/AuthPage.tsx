@@ -6,13 +6,21 @@ import PasswordResetForm from "@/components/auth/PasswordResetForm";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
 import { useLocation } from "wouter";
+import { useUser } from "@/hooks/use-user";
 
 export default function AuthPage() {
   const [tab, setTab] = useState<string>("login");
   const { toast } = useToast();
   const [location] = useLocation();
+  const { user } = useUser();
 
   useEffect(() => {
+    // Redirect if user is already logged in
+    if (user) {
+      window.location.href = '/';
+      return;
+    }
+
     // Check for error query parameter
     const params = new URLSearchParams(window.location.search);
     const error = params.get('error');
@@ -24,6 +32,8 @@ export default function AuthPage() {
         title: "Authentication Error",
         description: error === 'oauth_failed' 
           ? "Failed to authenticate with Google"
+          : error === 'invalid_state'
+          ? "Invalid authentication state"
           : "An error occurred during authentication",
       });
     }
@@ -32,7 +42,7 @@ export default function AuthPage() {
     if (token) {
       setTab("reset");
     }
-  }, [location, toast]);
+  }, [location, toast, user]);
 
   return (
     <div className="container relative min-h-screen flex-col items-center justify-center grid lg:max-w-none lg:grid-cols-2 lg:px-0">
