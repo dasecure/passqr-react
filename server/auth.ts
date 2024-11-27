@@ -8,8 +8,7 @@ declare module 'express-session' {
 
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
-import { Strategy as GoogleStrategy } from "passport-google-oauth20";
-import { Strategy as GitHubStrategy } from "passport-github2";
+
 import { type Express, type Request } from "express";
 import { type IVerifyOptions } from "passport-local";
 import session from "express-session";
@@ -184,79 +183,7 @@ export function setupAuth(app: Express) {
     }
   }));
 
-  // GitHub Strategy
-  passport.use(new GitHubStrategy({
-    clientID: process.env.GITHUB_CLIENT_ID!,
-    clientSecret: process.env.GITHUB_CLIENT_SECRET!,
-    callbackURL: `${process.env.PUBLIC_URL || 'http://localhost:5000'}/api/auth/github/callback`,
-    proxy: true
-  }, async (accessToken: string, refreshToken: string, profile: any, done: (error: any, user?: any) => void) => {
-    try {
-      // Check if user exists
-      const [existingUser] = await db
-        .select()
-        .from(users)
-        .where(eq(users.githubId, profile.id.toString()))
-        .limit(1);
-
-      if (existingUser) {
-        return done(null, existingUser);
-      }
-
-      // Create new user
-      const [newUser] = await db
-        .insert(users)
-        .values({
-          username: profile.username || profile.displayName || `github_${profile.id}`,
-          email: profile.emails?.[0]?.value || `${profile.id}@github.com`,
-          githubId: profile.id.toString(),
-          avatarUrl: profile.photos?.[0]?.value,
-          provider: "github"
-        })
-        .returning();
-
-      return done(null, newUser);
-    } catch (error) {
-      return done(error as Error);
-    }
-  }));
-
-  // Google Strategy
-  passport.use(new GoogleStrategy({
-    clientID: process.env.GOOGLE_CLIENT_ID!,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    callbackURL: getCallbackURL(),
-    proxy: true
-  }, async (accessToken: string, refreshToken: string, profile: any, done: (error: any, user?: any) => void) => {
-    try {
-      // Check if user exists
-      const [existingUser] = await db
-        .select()
-        .from(users)
-        .where(eq(users.googleId, profile.id))
-        .limit(1);
-
-      if (existingUser) {
-        return done(null, existingUser);
-      }
-
-      // Create new user
-      const [newUser] = await db
-        .insert(users)
-        .values({
-          username: profile.displayName || profile.emails?.[0]?.value?.split("@")[0] || profile.id,
-          email: profile.emails?.[0]?.value || `${profile.id}@google.com`,
-          googleId: profile.id,
-          avatarUrl: profile.photos?.[0]?.value,
-          provider: "google"
-        })
-        .returning();
-
-      return done(null, newUser);
-    } catch (error) {
-      return done(error as Error);
-    }
-  }));
+  
 
   passport.serializeUser((user, done) => {
     done(null, user.id);
